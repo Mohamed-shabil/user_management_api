@@ -2,7 +2,35 @@ const asyncHandler = require('express-async-handler')
 const AppError = require('../utils/appError')
 const User = require('../model/userModel')
 const jwt = require('jsonwebtoken')
+const sharp = require('sharp')
+const multer = require('multer')
 const {promisify} = require('util')
+
+const multerStorage = multer.memoryStorage();
+const multerFilter = (req,file,cb)=>{
+    if(file.mimetype.startsWith('image')){
+        cb(null,true)
+    }else{
+        cb(new AppError('Not an image !, Please upload only Images',400),false)
+    }
+}
+const upload = multer({
+    storage:multerStorage,
+    fileFilter : multerFilter
+})
+exports.uploadUserProfile =upload.single('profile')
+
+exports.resizeUserProfile = asyncHandler(async(req,res,next)=>{
+    if(!req.file) return next();
+    req.file.filename = `user-${req.user.id}-${Date.now()}.jpeg`;
+    req.body.profile = req.file.filename
+    await sharp(req.file.buffer)
+    .resize(500,500)
+    .toFormat('jpeg')
+    .jpeg({quality:90}).toFile(`public/profile/${req.file.filename}`);
+    next();
+});
+
 
 exports.home = (req,res)=>{
    res.status(200).json({
@@ -66,6 +94,22 @@ exports.login = asyncHandler(async(req,res,next)=>{
     createSendToken(user,200,res)
 })
 
+
+exports.editAccount = asyncHandler(async(req,res,next)=>{
+    const data = {
+        name:req.body.name,
+        email:req.body.email,
+        phone:req.body.phone,
+    }
+    if(req.body.profile){
+        data.profile = req.body.profile
+    }
+    const updatedData = await User.findOneAndUpdate({_id:req.user.id},data)
+    res.status(200).json({
+        status:'success',
+        data : updatedData
+    })
+})
 exports.protect = asyncHandler(async(req,res,next)=>{
     let token;
     if(

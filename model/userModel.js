@@ -7,7 +7,8 @@ const userSchema = new mongoose.Schema({
     },
     email:{
         type: String,
-        required: [true,'provide your email']
+        required: [true,'provide your email'],
+        unique:true
     },
     phone:{
         type: Number,
@@ -21,7 +22,7 @@ const userSchema = new mongoose.Schema({
     },
     profile:{
         type: String,
-        default:''
+        default:'user.png'
     }
 })
 
